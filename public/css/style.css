@@ -1,0 +1,119 @@
+* {
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
+}
+
+header {
+	display: grid;
+	column-gap: 80px;
+	margin-top: 64px;
+}
+
+body {
+	font-family: 'Courier New', Courier, monospace;
+	background-color: #151718;
+	color: #ffffff;
+}
+
+.container {
+	width: 960px;
+	margin: 0 auto;
+}
+
+.game {
+	display: block;
+	align-self: center;
+	justify-self: center;
+}
+.game2 {
+	display: block;
+	align-self: center;
+	justify-self: center;
+}
+.screen {
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
+	margin-top: 64px;
+}
+
+.header-icon {
+	display: inline;
+	margin-right: 4px;
+	height: 24px;
+	width: 24px;
+}
+
+/* COLORS */
+.color-pacman {
+	color: rgb(255, 255, 0);
+}
+.color-dot {
+	color: rgb(241, 116, 33);
+}
+.color-large-dot {
+	color: rgb(255, 255, 255);
+}
+.color-wall {
+	color: rgb(53, 48, 147);
+}
+.color-ghost-one {
+	color: rgb(13, 0, 255);
+}
+.color-ghost-two {
+	color: rgb(76, 186, 113);
+}
+.color-ghost-three {
+	color: rgb(0, 186, 189);
+}
+.color-ghost-four {
+	color: rgb(241, 106, 167);
+}
+.color-ghost-fear {
+	background-color: rgb(15, 33, 154);
+	color: white;
+}
+
+/* tutorial */
+form {
+	background: rgba(0, 0, 0, 0.15);
+	padding: 0.25rem;
+	position: fixed;
+	bottom: 0;
+	left: 0;
+	right: 0;
+	display: flex;
+	height: 3rem;
+	box-sizing: border-box;
+	backdrop-filter: blur(10px);
+}
+input {
+	border: none;
+	padding: 0 1rem;
+	flex-grow: 1;
+	border-radius: 2rem;
+	margin: 0.25rem;
+}
+input:focus {
+	outline: none;
+}
+form > button {
+	background: #333;
+	border: none;
+	padding: 0 1rem;
+	margin: 0.25rem;
+	border-radius: 3px;
+	outline: none;
+	color: #fff;
+}
+#messages {
+	list-style-type: none;
+	margin: 0;
+	padding: 0;
+}
+#messages > li {
+	padding: 0.5rem 1rem;
+}
+#messages > li:nth-child(odd) {
+	background: #333;
+}

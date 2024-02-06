@@ -1,7 +1,9 @@
-'use strict';
+const socket = io();
 
-const chalk = require('chalk');
-const readline = require('readline');
+const gameSpace = document.querySelector('.game');
+const screenSpace = document.querySelector('.game2');
+
+const waka = new Audio('../sounds/waka.mp3');
 
 const FRAME_DELAY = 200; // ms
 const FRAME_REDUCTION = 0.7; // frame delay is multiplied by FRAME_REDUCTION ** level (level starts at 0)
@@ -9,49 +11,56 @@ const POWERED_UP_FRAMES = 50;
 const NUM_OF_LIVES = 3;
 const GHOST_SPEED = 6; // 1/N chance not to move
 const GHOST_SPEED_SLOW = 4;
-const PACMAN_COLOR = [255, 255, 0]; // rgb(255,255,0)
-const DOT_COLOR = [241, 116, 33]; // rgb(241, 116, 33)
-const LARGE_DOT_COLOR = [255, 255, 255]; // rgb(255,255,255)
-const CHERRY_COLOR = [];
-const WALL_COLOR = [53, 48, 147]; // rgb(53, 48, 147)
-const GHOST_ONE_COLOR = [238, 65, 34]; // rgb(238,65,34)
-const GHOST_TWO_COLOR = [76, 186, 113]; // rgb(76, 186, 113)
-const GHOST_THREE_COLOR = [0, 186, 189]; // rgb(0, 186, 189)
-const GHOST_FOUR_COLOR = [241, 106, 167]; // rgb(241, 106, 167)
-const GHOST_FEAR_COLOR = [15, 33, 154]; // rgb(15, 33, 154)
+const PACMAN_COLOR = 'color-pacman'; // rgb(255,255,0)
+const DOT_COLOR = 'color-dot'; // rgb(241, 116, 33)
+const LARGE_DOT_COLOR = 'color-large-dot'; // rgb(255,255,255)
+const WALL_COLOR = 'color-wall'; // rgb(53, 48, 147)
+const GHOST_ONE_COLOR = 'color-ghost-one'; // rgb(238,65,34)
+const GHOST_TWO_COLOR = 'color-ghost-two'; // rgb(76, 186, 113)
+const GHOST_THREE_COLOR = 'color-ghost-three'; // rgb(0, 186, 189)
+const GHOST_FOUR_COLOR = 'color-ghost-four'; // rgb(241, 106, 167)
+const GHOST_FEAR_COLOR = 'color-ghost-fear'; // rgb(15, 33, 154)
 
-// Key press events
-readline.emitKeypressEvents(process.stdin);
+socket.on('frame', (map) => {
+	screenSpace.innerHTML = '';
 
-if (process.stdin.isTTY) process.stdin.setRawMode(true);
-
-process.stdin.on('keypress', (chunk, key) => {
+	map.forEach((row, index) => {
+		let printedRow = row.map((el) =>
+			span(entity.get(el).symbol, entity.get(el).color)
+		);
+		screenSpace.insertAdjacentHTML(
+			'beforeend',
+			`<p>${printedRow.join('')}</p>`
+		);
+	});
+});
+document.addEventListener('keydown', (e) => {
+	const key = e.key.toLowerCase();
+	console.log(socket.id);
 	if (!gameLive) {
 		gameLive = true;
 		game();
 	}
-	if (key.name === 'q') {
-		gameLive = false;
-		console.log('The end');
-		process.exit();
+	if (key === 'q') {
 	}
-	if (key.name === 'r') {
+	if (key === 'r') {
 		gameLive = false;
 		init();
 		frame = 0;
 	}
 	if (
-		key.name === 'up' ||
-		key.name === 'down' ||
-		key.name === 'left' ||
-		key.name === 'right'
+		key === 'arrowup' ||
+		key === 'arrowdown' ||
+		key === 'arrowleft' ||
+		key === 'arrowright'
 	) {
-		if (!wallAhead(player, key.name)) player.direction = key.name;
-		else player.desiredDirection = key.name;
+		const shortKey = key.slice(5);
+		socket.emit('keypress', shortKey);
+		if (!wallAhead(player, shortKey)) player.direction = shortKey;
+		else player.desiredDirection = shortKey;
 	}
 });
 
-// 1 - dot, 2 - large dot, 3 - wall, 4 - ghost
 const startMap = {
 	layout: [
 		[3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3],
@@ -97,18 +106,26 @@ const player = {
 };
 
 const entity = new Map([
-	[3, { symbol: chalk.rgb(...WALL_COLOR)('█') }],
-	[0, { symbol: ' ', reward: 0 }],
-	[1, { symbol: chalk.rgb(...DOT_COLOR)('·'), reward: 10 }],
-	[2, { symbol: chalk.rgb(...LARGE_DOT_COLOR)('⦁'), reward: 100 }],
+	[3, { symbol: '█', color: WALL_COLOR }],
+	[0, { symbol: ' ', reward: 0 }],
+	[1, { symbol: '·', reward: 10, color: DOT_COLOR }],
+	[2, { symbol: 'O', reward: 100, color: LARGE_DOT_COLOR }],
 	['ghost', 'M'], //fix make like the other entities
 	[
+		// 'pacman',
+		// {
+		// 	left: '◑',
+		// 	right: '◐',
+		// 	up: '◒',
+		// 	down: '◓',
+		// },
 		'pacman',
 		{
-			left: chalk.rgb(...PACMAN_COLOR)('◑'),
-			right: chalk.rgb(...PACMAN_COLOR)('◐'),
-			up: chalk.rgb(...PACMAN_COLOR)('◒'),
-			down: chalk.rgb(...PACMAN_COLOR)('◓'),
+			left: 'C',
+			right: 'C',
+			up: 'C',
+			down: 'C',
+			dead: ['X', ' '],
 		},
 	],
 	[5, { symbol: '🍒', reward: 200 }],
@@ -157,43 +174,67 @@ const ghostFour = {
 
 const ghosts = [ghostOne, ghostTwo, ghostThree, ghostFour];
 
+let gameLive = false;
+let level = 0;
+let frame = 0;
+let map = JSON.parse(JSON.stringify(startMap.layout));
+let score = 0;
+let highscore = 0;
+let lives = 3;
+
+function span(string, className = '') {
+	return `<span class="${className}">${string}</span>`;
+}
+
+function clearScreen() {
+	gameSpace.innerHTML = '';
+}
+function drawRow(html) {
+	gameSpace.insertAdjacentHTML('beforeend', `<p>${html}</p>`);
+}
+
 function drawInfoBar() {
-	console.log(
-		`${entity.get('pacman').left} `.repeat(lives >= 0 ? lives : 0) +
-			'  '.repeat(3 - lives) +
-			`${score}`.padStart(13, ' ')
-	);
+	let html =
+		span(`${entity.get('pacman').left} `, 'color-pacman').repeat(
+			lives >= 0 ? lives : 0
+		) + span('  '.repeat(3 - lives) + `${score}`.padStart(13, ' '));
+	drawRow(html);
 }
 
 // Draw frame function
 function drawFrame(map) {
-	console.clear();
+	clearScreen();
 
 	drawInfoBar();
 
 	map.forEach((row, index) => {
-		let printedRow = row.map((el) => entity.get(el).symbol);
+		let printedRow = row.map((el) =>
+			span(entity.get(el).symbol, entity.get(el).color)
+		);
 
 		// Draw ghosts
 		ghosts.forEach((ghost) => {
 			if (index === ghost.coords.y)
-				if (player.poweredUp) {
-					printedRow[ghost.coords.x] = chalk.bgRgb(...GHOST_FEAR_COLOR).white(
-						entity.get('ghost') //fix
-					);
-				} else
-					printedRow[ghost.coords.x] = chalk.rgb(...ghost.color)(
-						entity.get('ghost') //fix
-					);
+				printedRow[ghost.coords.x] = span(
+					entity.get('ghost'),
+					player.poweredUp ? 'color-ghost-fear' : ghost.color
+				);
 		});
 		// Draw player
 		if (index === player.coords.y)
-			printedRow[player.coords.x] = entity.get('pacman')[player.direction];
-		console.log(printedRow.join(''));
+			if (!player.dead)
+				printedRow[player.coords.x] = span(
+					entity.get('pacman')[player.direction],
+					'color-pacman'
+				);
+			else
+				printedRow[player.coords.x] = span(
+					entity.get('pacman').dead[frame % 2],
+					'color-pacman'
+				);
+
+		drawRow(printedRow.join(''));
 	});
-	// console.log(player.poweredUp);
-	// console.log(player.poweredUpTimer);
-	// console.log(player.poweredUpCombo);
 }
 
 // Collision check
@@ -263,6 +304,8 @@ function moveGhost(ghost) {
 function movePlayer() {
 	if (wallAhead(player, player.direction)) return;
 
+	//waka.play();
+
 	switch (player.direction) {
 		case 'up': {
 			player.coords.y -= 1;
@@ -318,34 +361,8 @@ async function playerDies() {
 	player.poweredUpTimer = 0;
 
 	for (let i = 0; i < 6; i++) {
-		console.clear();
-
-		drawInfoBar();
-
-		map.forEach((row, index) => {
-			let printedRow = row.map((el) => entity.get(el).symbol);
-
-			// Draw ghosts
-			ghosts.forEach((ghost) => {
-				if (index === ghost.coords.y)
-					if (player.poweredUp) {
-						printedRow[ghost.coords.x] = chalk.bgRgb(...GHOST_FEAR_COLOR).white(
-							entity.get('ghost') //fix
-						);
-					} else
-						printedRow[ghost.coords.x] = chalk.rgb(...ghost.color)(
-							entity.get('ghost') //fix
-						);
-			});
-
-			// Draw player
-			if (index === player.coords.y)
-				printedRow[player.coords.x] =
-					i % 2 === 1 ? chalk.rgb(255, 255, 0)('⦻') : ' ';
-
-			console.log(printedRow.join(''));
-		});
-
+		drawFrame(map);
+		frame++;
 		await delay(FRAME_DELAY * FRAME_REDUCTION ** level);
 	}
 
@@ -414,8 +431,10 @@ async function game() {
 		}
 
 		drawFrame(map);
-		console.log(`Highscore: ${highscore}`);
-		console.log("'q' - quit, 'r' - restart");
+		socket.emit('frame', map);
+
+		drawRow(`Highscore: ${highscore}`);
+		drawRow(`'q' - quit, 'r' - restart`);
 
 		await delay(FRAME_DELAY * FRAME_REDUCTION ** level);
 
@@ -465,18 +484,10 @@ async function game() {
 	}
 }
 
-// Initiate game state
-let gameLive = false;
-let level = 0;
-let frame = 0;
-let map;
-let score;
-let highscore = 0;
-let lives;
-
 function init() {
 	map = JSON.parse(JSON.stringify(startMap.layout));
 	lives = NUM_OF_LIVES;
+	level = 0;
 	player.dead = false;
 	player.poweredUp = false;
 	player.poweredUpCombo = 1;
@@ -486,15 +497,18 @@ function init() {
 	ghosts.forEach((ghost) => {
 		resetPosition(ghost);
 	});
+	const oldScore = score;
+	score = 0;
 	drawFrame(map);
-	if (score)
-		console.log(
-			`Game Over. You scored: ${score}! ${
-				highscore === score ? 'New Highscore!' : ''
+
+	if (oldScore)
+		drawRow(
+			`Game Over. You scored: ${oldScore}! ${
+				highscore === oldScore ? 'New Highscore!' : ''
 			}`
 		);
-	score = 0;
-	console.log('Press any key to start');
+
+	drawRow('Press any key to start');
 }
 
 init();
